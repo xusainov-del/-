@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Караваны Шёлкового пути (Copy)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>window.Peer||document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>')</script>
+<style>
+:root{
+  /* Ledger desk for a projector: cool paper, deep teal ink, amber for events; one theme on purpose */
+  --paper:#f3f6f5; --card:#ffffff; --ink:#12302c; --muted:#5b726d; --line:#d3dedb;
+  --teal:#0f6b5f; --teal-soft:#e1f0ed; --amber:#c27a00; --amber-soft:#fff3dc;
+  --plus:#16794a; --minus:#b3261e; --minus-soft:#fde8e6; --plus-soft:#e3f4ea;
+  --display:"Unbounded", "Arial Black", sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --mono:"IBM Plex Mono", Consolas, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding:16px clamp(16px,3vw,32px) 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(20px,2.6vw,30px);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:500;font-size:20px;margin:0 0 10px;text-wrap:balance}
+h3{font-size:16px;margin:0 0 6px;font-weight:600}
+nav.tabs{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+nav.tabs button{border:1.5px solid var(--ink);background:transparent;padding:7px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:18px 0}
+.round{font-family:var(--display);font-size:clamp(22px,3vw,34px);font-weight:700}
+.round small{font-family:var(--body);font-size:16px;font-weight:500;color:var(--muted);margin-left:8px}
+.progress{display:flex;gap:4px}
+.progress i{width:22px;height:8px;border-radius:4px;background:var(--line)}
+.progress i.done{background:var(--teal)} .progress i.now{background:var(--amber)}
+.spacer{flex:1}
+.btn{border:none;background:var(--teal);color:#fff;padding:9px 16px;border-radius:8px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--teal);border:1.5px solid var(--teal)}
+.btn.amber{background:var(--amber)}
+.btn.small{padding:5px 10px;font-size:14px}
+.btn.danger{background:transparent;color:var(--minus);border:1.5px solid var(--minus)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+label.toggle{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--muted);cursor:pointer}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:16px}
+.team{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;border-top:6px solid var(--line)}
+.team.ok{border-top-color:var(--plus)} .team.wrong{border-top-color:var(--minus)} .team.revealed{border-top-color:var(--amber)}
+.team-head{display:flex;gap:10px;align-items:flex-start}
+.team-head .name{font-family:var(--display);font-size:19px;font-weight:500;line-height:1.2}
+.team-head .biz{color:var(--muted);font-size:15px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.chip.pending{background:var(--line);color:var(--ink)} .chip.ok{background:var(--plus-soft);color:var(--plus)}
+.chip.wrong{background:var(--minus-soft);color:var(--minus)} .chip.revealed{background:var(--amber-soft);color:var(--amber)}
+.chip.up{background:var(--teal-soft);color:var(--teal)}
+.ledger{width:100%;border-collapse:collapse;font-size:16px}
+.ledger td{padding:6px 4px;border-bottom:1px dashed var(--line);vertical-align:top}
+.ledger td.amt{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;width:1%}
+.ledger tr.start td{font-weight:600;border-bottom:1.5px solid var(--ink)}
+.ledger .note{display:block;font-size:13px;color:var(--muted)}
+.ledger tr.ev td:first-child{border-left:4px solid var(--amber);padding-left:8px}
+.ledger .x{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 4px}
+.pos{color:var(--plus)} .neg{color:var(--minus)} .zero{color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.actions select,.field input,.field select,table.edit input,table.edit select{border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;min-width:0}
+.answer{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--paper);border-radius:10px;padding:10px}
+.answer input{font-family:var(--mono);font-size:20px;width:9em;border:2px solid var(--ink);border-radius:8px;padding:6px 10px}
+.answer .msg{font-weight:600}
+.big-balance{font-family:var(--mono);font-size:24px;font-weight:600}
+.owned{display:flex;flex-wrap:wrap;gap:6px}
+details.more summary{cursor:pointer;color:var(--teal);font-weight:600;font-size:15px}
+details.more .actions{margin-top:8px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.tablewrap{overflow-x:auto}
+table.edit{border-collapse:collapse;width:100%;font-size:15px}
+table.edit th{text-align:left;font-size:13px;color:var(--muted);font-weight:600;padding:6px;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+table.edit td{padding:5px 6px;border-bottom:1px solid var(--line)}
+table.edit input[type=number]{width:6.5em;font-family:var(--mono)}
+table.edit input.wide{width:100%;min-width:12em}
+.fields{display:flex;flex-wrap:wrap;gap:12px 20px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+.field input,.field select{color:var(--ink);font-size:16px}
+.rules{columns:2 320px;gap:28px;font-size:15px;margin:0;padding-left:20px}
+.rules li{margin-bottom:6px;break-inside:avoid}
+.res-table{border-collapse:collapse;font-size:16px;min-width:100%}
+.res-table th,.res-table td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.res-table th:first-child,.res-table td:first-child{text-align:left;font-family:var(--body)}
+.res-table thead th{font-family:var(--body);font-size:13px;color:var(--muted);border-bottom:1.5px solid var(--ink)}
+.verdicts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px}
+.verdict{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card)}
+.verdict .v{font-family:var(--display);font-size:22px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:4px;border-radius:2px;display:inline-block}
+/* event card overlay */
+.overlay{position:fixed;inset:0;background:rgba(18,48,44,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.overlay.show{display:flex}
+.evcard{background:var(--card);border-radius:18px;max-width:560px;width:100%;padding:28px;border:3px solid var(--amber);box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:12px}
+.evcard .who{color:var(--muted);font-weight:600}
+.evcard .ttl{font-family:var(--display);font-size:clamp(22px,3vw,30px);line-height:1.15;text-wrap:balance}
+.evcard .amt{font-family:var(--mono);font-size:clamp(34px,5vw,52px);font-weight:600}
+.evcard .shield{background:var(--teal-soft);color:var(--teal);padding:8px 12px;border-radius:8px;font-weight:600}
+@media (prefers-reduced-motion:no-preference){.evcard{animation:pop .25s ease-out}@keyframes pop{from{transform:scale(.92);opacity:.4}to{transform:none;opacity:1}}}
+.hint{font-size:14px;color:var(--muted)}
+.inline-warn{color:var(--amber);font-weight:600;font-size:15px}
+@media (max-width:600px){html,body{font-size:16px}.answer input{width:100%}}
+</style>
+</head>
+<body>
+<style>
+:root{
+  /* Silk Road ledger: sand paper, indigo ink, saffron for events */
+  --paper:#f3f1ec; --ink:#1f2a4d; --muted:#5f6680; --line:#d9d6cc;
+  --teal:#2d4a8a; --teal-soft:#e4e9f5; --amber:#c27a00; --amber-soft:#fff3dc;
+}
+.city{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+@media (max-width:820px){.city{grid-template-columns:1fr}}
+.prices{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.price{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--paper)}
+.price b{display:block;font-family:var(--mono);font-size:22px}
+.price span{font-size:13px;color:var(--muted)}
+.order{border:2px dashed var(--amber);border-radius:10px;padding:12px;background:var(--amber-soft);display:flex;flex-direction:column;gap:6px}
+.order .rw{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--plus)}
+.deal{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--teal);border-radius:12px;padding:14px 16px;margin-bottom:16px}
+.deal .actions label{display:flex;flex-direction:column;font-size:13px;color:var(--muted);gap:3px}
+.deal input,.deal select{border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;font-size:16px;color:var(--ink)}
+.inv{display:flex;flex-wrap:wrap;gap:6px}
+.inv .chip{background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.inv .chip.own{border-color:var(--teal);background:var(--teal-soft);color:var(--teal)}
+[hidden]{display:none !important}
+.err{color:var(--minus);font-weight:600;font-size:14px}
+table.edit td.c input[type=number]{width:4.5em}
+.offer{border:1px solid var(--line);border-left:5px solid var(--amber);border-radius:10px;padding:10px;margin-bottom:8px;background:var(--card)}
+.ptoast{position:fixed;left:12px;right:12px;bottom:14px;z-index:30;background:var(--ink);color:#fff;padding:12px 14px;border-radius:10px;font-weight:600;display:none}
+.ptoast.show{display:block}.ptoast.ok{background:var(--plus)}
+.qrbox{width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px}
+.qrbox svg{display:block;width:100%;height:auto}
+.pl .panel{margin-bottom:12px}
+</style>
+<div class="wrap">
+  <header class="top">
+    <h1 id="gameTitle">Караваны Шёлкового пути</h1>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-view="game">Игра</button>
+      <button role="tab" aria-selected="false" data-view="results">Итоги</button>
+      <button role="tab" aria-selected="false" data-view="players">Игроки (QR)</button>
+      <button role="tab" aria-selected="false" data-view="setup">Условия</button>
+    </nav>
+  </header>
+  <main id="view"></main>
+</div>
+<div class="overlay" id="overlay" role="dialog" aria-modal="true"><div class="evcard" id="ovCard"></div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const r2 = x => Math.round(x * 100) / 100;
+function fmt(n, sign) { n = r2(n); const s = Math.abs(n).toLocaleString("ru-RU", {maximumFractionDigits: 2}); return n < 0 ? "−" + s : (sign && n > 0 ? "+" + s : s); }
+const cls = n => n > 0 ? "pos" : n < 0 ? "neg" : "zero";
+function parseNum(v) { const t = String(v ?? "").trim().replace(/\s/g, "").replace(/[−–—]/g, "-").replace(",", "."); if (t === "" || t === "-") return NaN; return Number(t); }
+const CATS = ["разбойники", "буря", "верблюды", "пошлина", "базар", "другое"];
+const COLORS = ["#2d4a8a", "#c27a00", "#16794a", "#b3261e", "#7b3fa1", "#0f6b5f", "#5c5f66", "#d9480f"];
+
+function defaultState() {
+  const G = ["Шёлк", "Фарфор", "Специи", "Ковры", "Хлопок", "Сухофрукты"].map((name, i) => ({id: "g" + (i + 1), name}));
+  const city = (name, p, items, reward) => ({id: uid(), name, prices: Object.fromEntries(G.map((g, i) => [g.id, p[i]])), order: {items, reward}});
+  return {
+    settings: {title: "Караваны Шёлкового пути", start: -100, unit: "монеты", stock: 6, restock: 1},
+    goods: G,
+    teams: [
+      {id: uid(), name: "Караван Ли", good: "g1", expense: 6, pred: {yes: "", value: ""}},
+      {id: uid(), name: "Караван Мин", good: "g2", expense: 6, pred: {yes: "", value: ""}},
+      {id: uid(), name: "Караван Фарида", good: "g3", expense: 6, pred: {yes: "", value: ""}},
+      {id: uid(), name: "Караван Тимура", good: "g4", expense: 6, pred: {yes: "", value: ""}}
+    ],
+    cities: [
+      city("Кашгар", [4, 6, 9, 12, 5, 7], {g1: 1, g4: 1}, 25),
+      city("Коканд", [7, 8, 10, 9, 4, 5], {g2: 1, g3: 1}, 26),
+      city("Ташкент", [9, 10, 6, 8, 5, 6], {g1: 1, g2: 1, g3: 1}, 38),
+      city("Самарканд", [11, 12, 8, 6, 6, 4], {g4: 2, g1: 1}, 34),
+      city("Бухара", [12, 9, 7, 5, 7, 5], {g3: 2, g2: 1}, 32),
+      city("Мерв", [13, 14, 11, 7, 8, 6], {g1: 1, g2: 1, g3: 1, g4: 1}, 60),
+      city("Нишапур", [15, 13, 12, 10, 9, 7], {g2: 2, g1: 1}, 52),
+      city("Багдад", [16, 15, 14, 11, 9, 8], {g1: 2, g2: 1, g3: 1, g4: 1}, 80)
+    ],
+    upgrades: [
+      {id: uid(), name: "Охрана", cost: 15, restock: 0, exp: 0, shield: "разбойники", note: "Разбойники больше не страшны"},
+      {id: uid(), name: "Опытный проводник", cost: 12, restock: 0, exp: 0, shield: "буря", note: "Обходит песчаные бури"},
+      {id: uid(), name: "Погонщик-лекарь", cost: 8, restock: 0, exp: 0, shield: "верблюды", note: "Верблюды не болеют"},
+      {id: uid(), name: "Грамота правителя", cost: 10, restock: 0, exp: 0, shield: "пошлина", note: "Пошлины не берут"},
+      {id: uid(), name: "Ещё один верблюд", cost: 14, restock: 1, exp: 1, shield: "", note: "+1 товар каждый город, но корм дороже на 1"},
+      {id: uid(), name: "Свои шатры", cost: 9, restock: 0, exp: -2, shield: "", note: "Ночуем не в караван-сарае"}
+    ],
+    events: [
+      {id: uid(), title: "Песчаная буря, переход затянулся", amount: -6, cat: "буря"},
+      {id: uid(), title: "Буря засыпала колодец, покупаем воду", amount: -5, cat: "буря"},
+      {id: uid(), title: "Нападение разбойников", amount: -10, cat: "разбойники"},
+      {id: uid(), title: "Разбойники отняли часть выручки", amount: -7, cat: "разбойники"},
+      {id: uid(), title: "Заболел верблюд, нужно лечение", amount: -5, cat: "верблюды"},
+      {id: uid(), title: "Порвалась сбруя", amount: -3, cat: "верблюды"},
+      {id: uid(), title: "Новая пошлина на границе", amount: -4, cat: "пошлина"},
+      {id: uid(), title: "Богатый покупатель дал задаток", amount: 8, cat: "базар"},
+      {id: uid(), title: "Праздник на базаре", amount: 6, cat: "базар"},
+      {id: uid(), title: "Нашли оазис, сэкономили на воде", amount: 3, cat: "другое"},
+      {id: uid(), title: "Старый знакомый вернул долг", amount: 5, cat: "другое"},
+      {id: uid(), title: "Спокойный переход", amount: 0, cat: "другое"}
+    ],
+    deals: [],
+    orderDone: {},
+    round: 1, log: {}, showBalances: false
+  };
+}
+
+const KEY = "silk-road-game-v1";
+let S; try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+if (!S || !S.cities) S = defaultState();
+let view = "game", confirmReset = false, dealMsg = "", cardMsg = {};
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} schedBroadcast(); };
+const N = () => S.cities.length;
+const city = r => S.cities[r - 1];
+const gName = id => S.goods.find(g => g.id === id)?.name || "?";
+const teamById = id => S.teams.find(t => t.id === id);
+const upById = id => S.upgrades.find(u => u.id === id);
+function L(tid, r) {
+  S.log[tid] ??= {}; S.log[tid][r] ??= {};
+  const l = S.log[tid][r];
+  l.events ??= []; l.custom ??= []; l.purchases ??= []; l.sales ??= []; l.answer ??= ""; l.status ??= "pending"; l.tries ??= 0;
+  return l;
+}
+function ownedBefore(t, r) { const o = []; for (let k = 1; k < r; k++) (S.log[t.id]?.[k]?.purchases || []).forEach(id => { const u = upById(id); if (u) o.push(u); }); return o; }
+function evVal(t, r, e) { if (e.amount < 0) { const sh = ownedBefore(t, r).find(u => u.shield && u.shield === e.cat); if (sh) return {amt: 0, shield: sh.name}; } return {amt: e.amount}; }
+const orderText = o => Object.entries(o.items).filter(([, q]) => q > 0).map(([g, q]) => q + " × " + gName(g)).join(" + ");
+
+function ops(t, r) {
+  const owned = ownedBefore(t, r), l = L(t.id, r), list = [];
+  const exp = t.expense + owned.reduce((s, u) => s + (u.exp || 0), 0);
+  const en = owned.filter(u => u.exp).map(u => u.name).join(", ");
+  list.push({kind: "fix", label: "Корм и караван-сарай", note: en ? "с учётом: " + en : "", amt: -exp});
+  l.sales.forEach((s, i) => list.push({kind: "sale", idx: i, label: `Продали на базаре: ${s.qty} × ${gName(s.good)} по ${fmt(s.price)}`, amt: s.qty * s.price}));
+  if (S.orderDone[r] === t.id) list.push({kind: "order", label: "Заказ города " + city(r).name, note: orderText(city(r).order), amt: city(r).order.reward});
+  S.deals.forEach((d, i) => {
+    if (d.round !== r) return;
+    const what = d.good ? `${d.qty} × ${gName(d.good)}` : (d.note || "услуга");
+    if (d.from === t.id) list.push({kind: "deal", idx: i, label: `Продали каравану «${teamById(d.to)?.name || "?"}»: ${what}`, amt: d.price});
+    if (d.to === t.id) list.push({kind: "deal", idx: i, label: `Купили у каравана «${teamById(d.from)?.name || "?"}»: ${what}`, amt: -d.price});
+  });
+  l.purchases.forEach((id, i) => { const u = upById(id); if (u) list.push({kind: "buy", idx: i, label: "Улучшение: " + u.name, note: "работает со следующего города", amt: -u.cost}); });
+  l.events.forEach((e, i) => { const v = evVal(t, r, e); list.push({kind: "ev", idx: i, label: "Событие: " + e.title, note: v.shield ? `защищено: ${v.shield} (было ${fmt(e.amount)})` : (e.all ? "для всех караванов" : ""), amt: v.amt}); });
+  l.custom.forEach((c, i) => list.push({kind: "custom", idx: i, label: c.desc, note: "решение ведущего", amt: c.amount}));
+  return list;
+}
+function balEnd(t, r) { let b = S.settings.start; for (let k = 1; k <= r; k++) b += ops(t, k).reduce((s, o) => s + o.amt, 0); return r2(b); }
+const balStart = (t, r) => r <= 1 ? r2(S.settings.start) : balEnd(t, r - 1);
+const startKnown = (t, r) => r <= 1 || S.showBalances || ["ok", "revealed"].includes(S.log[t.id]?.[r - 1]?.status);
+
+function stock(t, r) {
+  const inv = Object.fromEntries(S.goods.map(g => [g.id, 0]));
+  inv[t.good] = (inv[t.good] || 0) + S.settings.stock;
+  for (let k = 1; k <= r; k++) {
+    if (k > 1) inv[t.good] += S.settings.restock + ownedBefore(t, k).reduce((s, u) => s + (u.restock || 0), 0);
+    (S.log[t.id]?.[k]?.sales || []).forEach(s => inv[s.good] -= s.qty);
+    if (S.orderDone[k] === t.id) Object.entries(city(k).order.items).forEach(([g, q]) => inv[g] -= q);
+    S.deals.forEach(d => { if (d.round === k && d.good) { if (d.from === t.id) inv[d.good] -= d.qty; if (d.to === t.id) inv[d.good] += d.qty; } });
+  }
+  return inv;
+}
+const stockOk = (t, r) => Object.values(stock(t, r)).every(v => v >= 0);
+function resetAns(tid, r) { const l = L(tid, r); if (l.status !== "pending") { l.status = "pending"; l.tries = 0; } }
+
+/* overlay */
+function showCard(html) { $("#ovCard").innerHTML = html + '<div class="actions"><span class="spacer"></span><button class="btn" id="ovClose">Записать в журнал</button></div>'; $("#overlay").classList.add("show"); $("#ovClose").focus(); $("#ovClose").onclick = closeCard; }
+function closeCard() { $("#overlay").classList.remove("show"); render(); }
+$("#overlay").addEventListener("click", e => { if (e.target.id === "overlay") closeCard(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#overlay").classList.contains("show")) closeCard(); });
+function draw(t, forced) {
+  if (!S.events.length) return;
+  const e = forced || S.events[Math.floor(Math.random() * S.events.length)], r = S.round;
+  const en = {title: e.title, amount: e.amount, cat: e.cat};
+  L(t.id, r).events.push(en); resetAns(t.id, r); save();
+  const v = evVal(t, r, en);
+  showCard(`<div class="who">${esc(t.name)} · ${esc(e.cat)}</div><div class="ttl">${esc(e.title)}</div>
+    <div class="amt ${cls(e.amount)}">${fmt(e.amount, true)} <span style="font-size:.45em">${esc(S.settings.unit)}</span></div>
+    ${v.shield ? `<div class="shield">Защита сработала: ${esc(v.shield)}. В журнал идёт 0.</div>` : ""}`);
+}
+function drawAll() {
+  if (!S.events.length) return;
+  const e = S.events[Math.floor(Math.random() * S.events.length)], r = S.round;
+  const li = S.teams.map(t => { const en = {title: e.title, amount: e.amount, cat: e.cat, all: true}; L(t.id, r).events.push(en); resetAns(t.id, r); const v = evVal(t, r, en); return `<li>${esc(t.name)}: <b class="${cls(v.amt)}">${fmt(v.amt, true)}</b>${v.shield ? " (защита: " + esc(v.shield) + ")" : ""}</li>`; }).join("");
+  save();
+  showCard(`<div class="who">Для всех караванов · ${esc(e.cat)}</div><div class="ttl">${esc(e.title)}</div><div class="amt ${cls(e.amount)}">${fmt(e.amount, true)} <span style="font-size:.45em">${esc(S.settings.unit)}</span></div><ul style="margin:0;padding-left:20px">${li}</ul>`);
+}
+
+function render() {
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.view === view));
+  $("#gameTitle").textContent = S.settings.title;
+  if (view === "game") renderGame(); else if (view === "results") renderResults(); else if (view === "players") renderPlayers(); else renderSetup();
+}
+
+/* ---------- game ---------- */
+function renderGame() {
+  const r = S.round;
+  if (r > N()) { view = "results"; return render(); }
+  const c = city(r);
+  const prog = S.cities.map((x, i) => `<i class="${i + 1 < r ? "done" : i + 1 === r ? "now" : ""}" title="${esc(x.name)}"></i>`).join("");
+  const pending = S.teams.filter(t => !["ok", "revealed"].includes(L(t.id, r).status)).length;
+  const doneBy = S.orderDone[r] ? teamById(S.orderDone[r]) : null;
+  const teamOpts = S.teams.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("");
+  const goodOpts = S.goods.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join("");
+  let h = `<div class="bar">
+    <div class="round">${esc(c.name)}<small>город ${r} из ${N()} · деньги: ${esc(S.settings.unit)}</small></div>
+    <div class="progress" aria-hidden="true">${prog}</div><span class="spacer"></span>
+    <label class="toggle"><input type="checkbox" id="showBal" ${S.showBalances ? "checked" : ""}> Показывать балансы</label>
+    <button class="btn amber" id="drawAll">Событие для всех</button>
+    <button class="btn" id="next">${r === N() ? "Завершить путь" : "Дальше, в " + esc(S.cities[r].name)}</button></div>
+  <div id="nextWarn" class="inline-warn" hidden>Ещё ${pending} ${pending === 1 ? "караван не сдал" : "каравана не сдали"} расчёт. Нажмите ещё раз, чтобы всё равно идти дальше.</div>
+  <section class="city" aria-label="Базар">
+    <div><h2>Базар ${esc(c.name)}: здесь покупают</h2>
+      <div class="prices">${S.goods.map(g => `<div class="price"><span>${esc(g.name)}</span><b>${fmt(c.prices[g.id] ?? 0)}</b><span>за 1 шт.</span></div>`).join("")}</div>
+      <p class="hint" style="margin:8px 0 0">Базар только покупает. Чужой товар можно достать только у другого каравана.</p></div>
+    <div class="order"><h3 style="margin:0">Заказ правителя ${esc(c.name)}</h3>
+      <div>${esc(orderText(c.order))}</div><div class="rw">+${fmt(c.order.reward)}</div>
+      <div class="hint">Получит только первый караван, который соберёт весь набор.</div>
+      ${doneBy ? `<span class="chip ok">Выполнил: ${esc(doneBy.name)}</span>` : ""}</div>
+  </section>
+  <section class="deal" aria-label="Сделка между караванами"><h2>Сделка между караванами</h2>
+    <div class="actions">
+      <label>Продаёт<select id="d-from">${teamOpts}</select></label>
+      <label>Покупает<select id="d-to">${teamOpts}</select></label>
+      <label>Товар<select id="d-good">${goodOpts}<option value="">услуга</option></select></label>
+      <label>Сколько<input id="d-qty" type="number" min="1" value="1" style="width:5em"></label>
+      <label>Цена за всё<input id="d-price" inputmode="decimal" style="width:6em" placeholder="15"></label>
+      <label id="d-note-l" hidden>Что за услуга<input id="d-note" placeholder="проводник через пустыню"></label>
+      <button class="btn" id="d-go" style="align-self:flex-end">Заключить сделку</button>
+    </div>${dealMsg ? `<p class="err">${esc(dealMsg)}</p>` : ""}
+    <p class="hint" style="margin:6px 0 0">Сделка попадает в журнал обоих караванов: продавцу плюс, покупателю минус. Цену команды договариваются сами.</p>
+  </section>
+  <div class="grid">${S.teams.map(t => card(t, r)).join("")}</div>`;
+  $("#view").innerHTML = h;
+  dealMsg = "";
+  if (S.teams[1]) $("#d-to").value = S.teams[1].id;
+  $("#d-good").onchange = e => { $("#d-note-l").hidden = e.target.value !== ""; $("#d-qty").disabled = e.target.value === ""; };
+  $("#d-from").onchange = e => { const t = teamById(e.target.value); if (t) $("#d-good").value = t.good; };
+  $("#d-from").dispatchEvent(new Event("change"));
+  $("#d-go").onclick = () => {
+    const from = $("#d-from").value, to = $("#d-to").value, good = $("#d-good").value;
+    const qty = good ? Math.round(parseNum($("#d-qty").value)) : 0, price = parseNum($("#d-price").value);
+    if (from === to) { dealMsg = "Продавец и покупатель должны быть разными караванами."; return render(); }
+    if (isNaN(price) || price < 0) { dealMsg = "Впишите цену сделки (неотрицательное число)."; return render(); }
+    if (good && !(qty > 0)) { dealMsg = "Количество товара должно быть больше нуля."; return render(); }
+    const d = {round: r, from, to, good, qty, price, note: $("#d-note").value.trim()};
+    S.deals.push(d);
+    if (good && !stockOk(teamById(from), r)) { S.deals.pop(); dealMsg = `У каравана «${teamById(from).name}» нет столько товара «${gName(good)}».`; return render(); }
+    resetAns(from, r); resetAns(to, r); save(); render();
+  };
+  $("#showBal").onchange = e => { S.showBalances = e.target.checked; save(); render(); };
+  $("#drawAll").onclick = drawAll;
+  let armed = false;
+  $("#next").onclick = () => { if (pending && !armed) { armed = true; $("#nextWarn").hidden = false; return; } S.round++; cardMsg = {}; save(); render(); window.scrollTo({top: 0}); };
+  bindCards(r);
+}
+
+function card(t, r) {
+  const l = L(t.id, r), list = ops(t, r), known = startKnown(t, r), start = balStart(t, r), end = balEnd(t, r);
+  const owned = ownedBefore(t, r), inv = stock(t, r), c = city(r);
+  const st = {pending: "считают", ok: "верно", wrong: "есть ошибка", revealed: "ответ показан"}[l.status];
+  const rows = list.map(o => `<tr class="${o.kind === "ev" ? "ev" : ""}"><td>${esc(o.label)}${o.note ? `<span class="note">${esc(o.note)}</span>` : ""}</td><td class="amt ${cls(o.amt)}">${fmt(o.amt, true)}</td>
+    <td style="width:1%">${["sale", "deal", "buy", "ev", "custom", "order"].includes(o.kind) ? `<button class="x" aria-label="Убрать строку" data-rm="${o.kind}" data-i="${o.idx ?? ""}" data-t="${t.id}">✕</button>` : ""}</td></tr>`).join("");
+  const have = S.goods.filter(g => inv[g.id] > 0);
+  const avail = S.upgrades.filter(u => !owned.includes(u) && !l.purchases.includes(u.id));
+  const canOrder = !S.orderDone[r] && Object.entries(c.order.items).every(([g, q]) => (inv[g] || 0) >= q);
+  const done = ["ok", "revealed"].includes(l.status);
+  return `<section class="team ${l.status}" aria-label="${esc(t.name)}">
+    <div class="team-head"><div style="flex:1"><div class="name">${esc(t.name)}</div><div class="biz">Везёт: ${esc(gName(t.good))}</div></div><span class="chip ${l.status}">${st}</span></div>
+    <div class="inv" aria-label="Товары в караване">${S.goods.filter(g => inv[g.id] !== 0 || g.id === t.good).map(g => `<span class="chip ${g.id === t.good ? "own" : ""}">${esc(g.name)}: ${inv[g.id]}</span>`).join("")}${owned.map(u => `<span class="chip up" title="${esc(u.note)}">${esc(u.name)}</span>`).join("")}</div>
+    <table class="ledger"><tr class="start"><td>Казна на входе в город</td><td class="amt ${known ? cls(start) : ""}">${known ? fmt(start) : "?"}</td><td></td></tr>${rows}</table>
+    <div class="actions">
+      <select id="sg-${t.id}" aria-label="Товар для продажи" ${have.length ? "" : "disabled"}>${have.map(g => `<option value="${g.id}">${esc(g.name)} по ${fmt(c.prices[g.id] ?? 0)} (есть ${inv[g.id]})</option>`).join("") || "<option>Нечего продавать</option>"}</select>
+      <input id="sq-${t.id}" type="number" min="1" value="1" style="width:4.5em" aria-label="Сколько продать">
+      <button class="btn ghost small" data-sell="${t.id}" ${have.length ? "" : "disabled"}>Продать на базаре</button>
+      <button class="btn small" data-order="${t.id}" ${canOrder ? "" : "disabled"} title="${canOrder ? "" : "Не хватает товаров или заказ уже выполнен"}">Выполнить заказ</button>
+    </div>
+    ${cardMsg[t.id] ? `<div class="err">${esc(cardMsg[t.id])}</div>` : ""}
+    <div class="actions">
+      <button class="btn amber small" data-draw="${t.id}">Вытянуть событие</button>
+      <select id="up-${t.id}" aria-label="Улучшение" ${avail.length ? "" : "disabled"}>${avail.map(u => `<option value="${u.id}">${esc(u.name)} — ${fmt(u.cost)}</option>`).join("") || "<option>Всё куплено</option>"}</select>
+      <button class="btn ghost small" data-buy="${t.id}" ${avail.length ? "" : "disabled"}>Купить</button>
+    </div>
+    <details class="more"><summary>Выбрать событие вручную или добавить свою операцию</summary>
+      <div class="actions"><select id="ev-${t.id}" aria-label="Событие">${S.events.map(e => `<option value="${e.id}">${esc(e.title)} (${fmt(e.amount, true)})</option>`).join("")}</select><button class="btn ghost small" data-pick="${t.id}">Применить</button></div>
+      <div class="actions"><input id="cd-${t.id}" placeholder="Что случилось" style="flex:1;min-width:10em;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px"><input id="ca-${t.id}" placeholder="−5 или 3" inputmode="decimal" style="width:7em;font-family:var(--mono);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px"><button class="btn ghost small" data-custom="${t.id}">Добавить</button></div>
+    </details>
+    <div class="answer">${done
+      ? `<span>Казна при выходе из города:</span> <span class="big-balance ${cls(end)}">${fmt(end)}</span> <span class="chip ${end >= 0 ? "ok" : "wrong"}">${end >= 0 ? "в плюсе" : "в долгу"}</span>`
+      : `<label for="ans-${t.id}">Казна при выходе из города:</label><input id="ans-${t.id}" inputmode="decimal" value="${esc(l.answer)}" placeholder="?">
+         <button class="btn small" data-check="${t.id}">Проверить</button>
+         ${l.status === "wrong" ? `<span class="msg neg">Неверно (попыток: ${l.tries}). Пересчитайте.</span>` : ""}
+         ${l.tries >= 2 ? `<button class="btn ghost small" data-reveal="${t.id}">Показать ответ</button>` : ""}
+         ${S.showBalances ? `<span class="hint">ведущему: ${fmt(end)}</span>` : ""}`}</div>
+  </section>`;
+}
+
+function bindCards(r) {
+  const all = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
+  all("[data-sell]", b => b.onclick = () => {
+    const t = teamById(b.dataset.sell), g = $("#sg-" + t.id).value, q = Math.round(parseNum($("#sq-" + t.id).value));
+    if (!(q > 0)) return;
+    const l = L(t.id, r); l.sales.push({good: g, qty: q, price: city(r).prices[g] ?? 0});
+    if (!stockOk(t, r)) { l.sales.pop(); cardMsg[t.id] = `Не хватает товара «${gName(g)}».`; return render(); }
+    cardMsg[t.id] = ""; resetAns(t.id, r); save(); render();
+  });
+  all("[data-order]", b => b.onclick = () => { if (S.orderDone[r]) return; S.orderDone[r] = b.dataset.order; resetAns(b.dataset.order, r); save(); render(); });
+  all("[data-draw]", b => b.onclick = () => draw(teamById(b.dataset.draw)));
+  all("[data-pick]", b => b.onclick = () => { const e = S.events.find(x => x.id === $("#ev-" + b.dataset.pick).value); if (e) draw(teamById(b.dataset.pick), e); });
+  all("[data-buy]", b => b.onclick = () => { const id = $("#up-" + b.dataset.buy).value; if (!upById(id)) return; L(b.dataset.buy, r).purchases.push(id); resetAns(b.dataset.buy, r); save(); render(); });
+  all("[data-custom]", b => b.onclick = () => {
+    const id = b.dataset.custom, a = parseNum($("#ca-" + id).value);
+    if (isNaN(a)) { $("#ca-" + id).style.borderColor = "var(--minus)"; $("#ca-" + id).focus(); return; }
+    L(id, r).custom.push({desc: $("#cd-" + id).value.trim() || "Операция ведущего", amount: a}); resetAns(id, r); save(); render();
+  });
+  all("[data-rm]", b => b.onclick = () => {
+    const tid = b.dataset.t, l = L(tid, r), i = +b.dataset.i, k = b.dataset.rm;
+    if (k === "deal") { const d = S.deals[i]; S.deals.splice(i, 1); if (!S.teams.every(t => stockOk(t, r))) { S.deals.splice(i, 0, d); cardMsg[tid] = "Эту сделку нельзя отменить: товар уже продан дальше."; return render(); } resetAns(d.from, r); resetAns(d.to, r); }
+    else if (k === "order") { const prev = S.orderDone[r]; delete S.orderDone[r]; if (!S.teams.every(t => stockOk(t, r))) { S.orderDone[r] = prev; return render(); } }
+    else { const arr = {sale: l.sales, buy: l.purchases, ev: l.events, custom: l.custom}[k]; const it = arr.splice(i, 1)[0]; if (!S.teams.every(t => stockOk(t, r))) { arr.splice(i, 0, it); cardMsg[tid] = "Эту строку нельзя убрать: товар уже ушёл дальше."; return render(); } }
+    resetAns(tid, r); save(); render();
+  });
+  all("[data-check]", b => {
+    const t = teamById(b.dataset.check), inp = $("#ans-" + t.id);
+    const go = () => { const l = L(t.id, r), v = parseNum(inp.value); l.answer = inp.value; if (isNaN(v)) return inp.focus(); if (Math.abs(v - balEnd(t, r)) < 0.005) l.status = "ok"; else { l.status = "wrong"; l.tries++; } save(); render(); };
+    b.onclick = go; inp.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+    inp.addEventListener("input", () => { L(t.id, r).answer = inp.value; save(); });
+  });
+  all("[data-reveal]", b => b.onclick = () => { L(b.dataset.reveal, r).status = "revealed"; save(); render(); });
+}
+
+/* ---------- results ---------- */
+function renderResults() {
+  const fin = S.round > N(), last = Math.min(S.round - 1, N());
+  let h = `<div class="bar"><div class="round">${fin ? "Путь окончен" : "Промежуточные итоги"}<small>${last ? "пройдено городов: " + last + " из " + N() : "караваны ещё в пути"}</small></div><span class="spacer"></span>${fin ? `<button class="btn ghost" id="back">Вернуться в ${esc(S.cities[N() - 1].name)}</button>` : ""}</div>
+  <div class="panel"><h2>Прогноз: вернёт ли караван долг и выйдет в плюс в конце пути?</h2>
+  <p class="hint" style="margin-top:0">Караваны делают прогноз заранее, например в третьем городе, и обосновывают его расчётом.</p>
+  <div class="tablewrap"><table class="edit"><thead><tr><th>Караван</th><th>Выйдем в плюс?</th><th>Ожидаемая казна в конце</th>${fin ? "<th>Факт</th><th>Прогноз</th>" : ""}</tr></thead><tbody>`;
+  S.teams.forEach(t => {
+    let v = "";
+    if (fin) { const b = balEnd(t, N()), ok = t.pred.yes === "" ? null : (t.pred.yes === "да") === (b >= 0); v = `<td class="${cls(b)}" style="font-family:var(--mono);font-weight:600">${fmt(b)}</td><td>${ok === null ? "—" : ok ? '<span class="chip ok">сбылся</span>' : '<span class="chip wrong">не сбылся</span>'}</td>`; }
+    h += `<tr><td><b>${esc(t.name)}</b></td><td><select data-py="${t.id}" aria-label="Прогноз"><option value="">—</option><option ${t.pred.yes === "да" ? "selected" : ""}>да</option><option ${t.pred.yes === "нет" ? "selected" : ""}>нет</option></select></td><td><input data-pv="${t.id}" value="${esc(t.pred.value)}" inputmode="decimal" style="width:8em;font-family:var(--mono)" aria-label="Ожидаемая казна"></td>${v}</tr>`;
+  });
+  h += `</tbody></table></div></div>`;
+  if (last > 0) {
+    h += `<div class="panel"><h2>Казна по городам</h2><div class="tablewrap"><table class="res-table"><thead><tr><th>Караван</th><th>Старт</th>${S.cities.slice(0, last).map(c => `<th>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>`;
+    S.teams.forEach(t => { h += `<tr><td><b>${esc(t.name)}</b></td><td class="${cls(S.settings.start)}">${fmt(S.settings.start)}</td>`; for (let k = 1; k <= last; k++) { const b = balEnd(t, k); h += `<td class="${cls(b)}">${fmt(b)}</td>`; } h += `</tr>`; });
+    h += `</tbody></table></div>${chart(last)}</div><div class="verdicts">` + S.teams.map(t => {
+      const b = balEnd(t, last); let ok = 0, tot = 0;
+      for (let k = 1; k <= last; k++) { const s = S.log[t.id]?.[k]?.status; if (s) { tot++; if (s === "ok") ok++; } }
+      const nd = S.deals.filter(d => d.round <= last && (d.from === t.id || d.to === t.id)).length;
+      const no = Object.entries(S.orderDone).filter(([k, v]) => +k <= last && v === t.id).length;
+      return `<div class="verdict"><h3>${esc(t.name)}</h3><div class="v ${cls(b)}">${fmt(b)}</div><div class="hint">${b >= 0 ? "долг вернули, караван в плюсе" : "караван в долгу"} · сделок с другими: ${nd} · заказов: ${no} · верных расчётов: ${ok} из ${tot}</div></div>`;
+    }).join("") + `</div>`;
+  }
+  $("#view").innerHTML = h;
+  document.querySelectorAll("[data-py]").forEach(s => s.onchange = () => { teamById(s.dataset.py).pred.yes = s.value; save(); if (fin) render(); });
+  document.querySelectorAll("[data-pv]").forEach(i => i.oninput = () => { teamById(i.dataset.pv).pred.value = i.value; save(); });
+  if ($("#back")) $("#back").onclick = () => { S.round = N(); save(); view = "game"; render(); };
+}
+function chart(last) {
+  const W = 900, H = 320, pl = 60, pr = 20, pt = 16, pb = 36;
+  const ser = S.teams.map(t => [S.settings.start, ...Array.from({length: last}, (_, k) => balEnd(t, k + 1))]);
+  let mn = Math.min(0, ...ser.flat()), mx = Math.max(0, ...ser.flat()); if (mn === mx) mx = mn + 1;
+  const raw = (mx - mn) / 5, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p, step = (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+  mn = Math.floor(mn / step) * step; mx = Math.ceil(mx / step) * step;
+  const x = i => pl + (W - pl - pr) * i / last, y = v => pt + (H - pt - pb) * (1 - (v - mn) / (mx - mn));
+  let g = "";
+  for (let v = mn; v <= mx + 1e-9; v += step) g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="${Math.abs(v) < 1e-9 ? "#1f2a4d" : "#d9d6cc"}" stroke-width="${Math.abs(v) < 1e-9 ? 1.5 : 1}"/><text x="${pl - 8}" y="${y(v) + 5}" text-anchor="end" font-size="13" fill="#5f6680" font-family="IBM Plex Mono, monospace">${fmt(v)}</text>`;
+  for (let i = 0; i <= last; i++) g += `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="12" fill="#5f6680">${i === 0 ? "старт" : esc(S.cities[i - 1].name)}</text>`;
+  const lines = ser.map((s, ti) => { const c = COLORS[ti % COLORS.length]; return `<polyline points="${s.map((v, i) => x(i) + "," + y(v)).join(" ")}" fill="none" stroke="${c}" stroke-width="3" stroke-linejoin="round"/>${s.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="${i === s.length - 1 ? 6 : 3.5}" fill="${c}"/>`).join("")}`; }).join("");
+  return `<div class="tablewrap" style="margin-top:14px"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="График казны караванов">${g}${lines}</svg></div><div class="legend">${S.teams.map((t, i) => `<span><i style="background:${COLORS[i % COLORS.length]}"></i>${esc(t.name)}</span>`).join("")}</div>`;
+}
+
+/* ---------- setup ---------- */
+function renderSetup() {
+  const s = S.settings, num = v => { const n = parseNum(v); return isNaN(n) ? 0 : n; };
+  const catOpts = sel => CATS.map(c => `<option ${c === sel ? "selected" : ""}>${c}</option>`).join("");
+  const gOpts = sel => S.goods.map(g => `<option value="${g.id}" ${g.id === sel ? "selected" : ""}>${esc(g.name)}</option>`).join("");
+  let h = `<div class="bar"><div class="round">Условия игры</div><span class="spacer"></span><button class="btn danger" id="reset">${confirmReset ? "Точно? Нажмите ещё раз" : "Начать новую игру"}</button></div>
+  <div class="panel"><h2>Правила для караванов</h2><ol class="rules">
+    <li>Каждый караван везёт один свой товар и начинает путь в долгу: товар взят у купца в кредит.</li>
+    <li>В каждом городе караван платит за корм и ночлег (−) и может продать товар на базаре (+). Цены в каждом городе свои.</li>
+    <li>Базар только покупает. Чужой товар можно получить, только купив его у другого каравана. Цену договаривайтесь сами.</li>
+    <li>У правителя каждого города есть заказ: набор разных товаров за большую награду. Награду получает первый караван, который соберёт набор.</li>
+    <li>В каждом следующем городе мастерская присылает каравану ещё ${s.restock} шт. своего товара.</li>
+    <li>Улучшения оплачиваются сразу, а работают со следующего города. Защита обнуляет плохие события своей категории.</li>
+    <li>Перед выходом из города караван сам считает казну. Отрицательная казна — это долг.</li>
+    <li>Главный вопрос: вернёт ли караван долг и выйдет ли в плюс к концу пути? Сделайте прогноз и докажите его расчётом.</li>
+  </ol></div>
+  <div class="panel"><h2>Общие настройки</h2><div class="fields">
+    <label class="field">Название<input id="s-title" value="${esc(s.title)}"></label>
+    <label class="field">Стартовая казна (долг)<input id="s-start" value="${fmt(s.start)}" inputmode="decimal" style="width:8em"></label>
+    <label class="field">Единицы<input id="s-unit" value="${esc(s.unit)}" style="width:8em"></label>
+    <label class="field">Товара на старте, шт.<input id="s-stock" type="number" min="0" value="${s.stock}" style="width:7em"></label>
+    <label class="field">Пополнение в каждом городе, шт.<input id="s-restock" type="number" min="0" value="${s.restock}" style="width:7em"></label>
+  </div></div>
+  <div class="panel"><h2>Товары</h2><div class="fields">${S.goods.map(g => `<label class="field">Товар<input data-good="${g.id}" value="${esc(g.name)}" style="width:10em"></label>`).join("")}</div></div>
+  <div class="panel"><h2>Караваны</h2><div class="tablewrap"><table class="edit"><thead><tr><th>Караван</th><th>Свой товар</th><th>Корм и ночлег за город</th><th></th></tr></thead><tbody>
+    ${S.teams.map(t => `<tr><td><input class="wide" data-tf="name" data-id="${t.id}" value="${esc(t.name)}" aria-label="Название"></td><td><select data-tf="good" data-id="${t.id}" aria-label="Товар">${gOpts(t.good)}</select></td><td><input type="number" step="any" data-tf="expense" data-id="${t.id}" value="${t.expense}" aria-label="Расходы"></td><td><button class="btn danger small" data-del-team="${t.id}">Удалить</button></td></tr>`).join("")}
+  </tbody></table></div><div class="actions" style="margin-top:10px"><button class="btn ghost small" id="addTeam">Добавить караван</button></div></div>
+  <div class="panel"><h2>Маршрут: цены базаров и заказы</h2><p class="hint" style="margin-top:0">Слева цены за 1 шт., справа сколько штук каждого товара нужно для заказа и награда.</p>
+  <div class="tablewrap"><table class="edit"><thead><tr><th>Город</th>${S.goods.map(g => `<th>${esc(g.name)}</th>`).join("")}${S.goods.map(g => `<th>заказ: ${esc(g.name)}</th>`).join("")}<th>Награда</th><th></th></tr></thead><tbody>
+    ${S.cities.map(c => `<tr><td><input data-cn="${c.id}" value="${esc(c.name)}" style="width:8em" aria-label="Город"></td>${S.goods.map(g => `<td class="c"><input type="number" step="any" data-cp="${c.id}" data-g="${g.id}" value="${c.prices[g.id] ?? 0}" aria-label="Цена"></td>`).join("")}${S.goods.map(g => `<td class="c"><input type="number" min="0" data-co="${c.id}" data-g="${g.id}" value="${c.order.items[g.id] || 0}" aria-label="В заказе"></td>`).join("")}<td class="c"><input type="number" step="any" data-cr="${c.id}" value="${c.order.reward}" aria-label="Награда"></td><td><button class="btn danger small" data-del-city="${c.id}">Удалить</button></td></tr>`).join("")}
+  </tbody></table></div><div class="actions" style="margin-top:10px"><button class="btn ghost small" id="addCity">Добавить город</button></div></div>
+  <div class="panel"><h2>Улучшения</h2><p class="hint" style="margin-top:0">«Товар»: сколько штук добавляется в каждом следующем городе. «Расходы»: −2 значит на 2 меньше.</p><div class="tablewrap"><table class="edit"><thead><tr><th>Название</th><th>Цена</th><th>Товар</th><th>Расходы</th><th>Защита</th><th>Пояснение</th><th></th></tr></thead><tbody>
+    ${S.upgrades.map(u => `<tr><td><input class="wide" data-uf="name" data-id="${u.id}" value="${esc(u.name)}" aria-label="Название"></td><td><input type="number" step="any" data-uf="cost" data-id="${u.id}" value="${u.cost}" aria-label="Цена"></td><td><input type="number" data-uf="restock" data-id="${u.id}" value="${u.restock}" aria-label="Товар"></td><td><input type="number" step="any" data-uf="exp" data-id="${u.id}" value="${u.exp}" aria-label="Расходы"></td><td><select data-uf="shield" data-id="${u.id}" aria-label="Защита"><option value="">нет</option>${catOpts(u.shield)}</select></td><td><input class="wide" data-uf="note" data-id="${u.id}" value="${esc(u.note)}" aria-label="Пояснение"></td><td><button class="btn danger small" data-del-up="${u.id}">Удалить</button></td></tr>`).join("")}
+  </tbody></table></div><div class="actions" style="margin-top:10px"><button class="btn ghost small" id="addUp">Добавить улучшение</button></div></div>
+  <div class="panel"><h2>Колода событий</h2><div class="tablewrap"><table class="edit"><thead><tr><th>Событие</th><th>Сумма</th><th>Категория</th><th></th></tr></thead><tbody>
+    ${S.events.map(e => `<tr><td><input class="wide" data-ef="title" data-id="${e.id}" value="${esc(e.title)}" aria-label="Событие"></td><td><input type="number" step="any" data-ef="amount" data-id="${e.id}" value="${e.amount}" aria-label="Сумма"></td><td><select data-ef="cat" data-id="${e.id}" aria-label="Категория">${catOpts(e.cat)}</select></td><td><button class="btn danger small" data-del-ev="${e.id}">Удалить</button></td></tr>`).join("")}
+  </tbody></table></div><div class="actions" style="margin-top:10px"><button class="btn ghost small" id="addEv">Добавить событие</button></div></div>`;
+  $("#view").innerHTML = h;
+  const on = (sel, fn) => document.querySelectorAll(sel).forEach(i => i.onchange = () => { fn(i); save(); });
+  $("#s-title").oninput = e => { s.title = e.target.value; $("#gameTitle").textContent = s.title; save(); };
+  $("#s-start").onchange = e => { s.start = num(e.target.value); save(); };
+  $("#s-unit").oninput = e => { s.unit = e.target.value; save(); };
+  $("#s-stock").onchange = e => { s.stock = Math.max(0, Math.round(num(e.target.value))); save(); };
+  $("#s-restock").onchange = e => { s.restock = Math.max(0, Math.round(num(e.target.value))); save(); render(); };
+  on("[data-good]", i => S.goods.find(g => g.id === i.dataset.good).name = i.value);
+  on("[data-tf]", i => { const t = teamById(i.dataset.id); t[i.dataset.tf] = i.type === "number" ? num(i.value) : i.value; });
+  on("[data-cn]", i => S.cities.find(c => c.id === i.dataset.cn).name = i.value);
+  on("[data-cp]", i => S.cities.find(c => c.id === i.dataset.cp).prices[i.dataset.g] = num(i.value));
+  on("[data-co]", i => S.cities.find(c => c.id === i.dataset.co).order.items[i.dataset.g] = Math.max(0, Math.round(num(i.value))));
+  on("[data-cr]", i => S.cities.find(c => c.id === i.dataset.cr).order.reward = num(i.value));
+  on("[data-uf]", i => { const u = upById(i.dataset.id); u[i.dataset.uf] = i.type === "number" ? num(i.value) : i.value; });
+  on("[data-ef]", i => { const e = S.events.find(x => x.id === i.dataset.id); e[i.dataset.ef] = i.type === "number" ? num(i.value) : i.value; });
+  const del = (sel, key, attr) => document.querySelectorAll(sel).forEach(b => b.onclick = () => { S[key] = S[key].filter(x => x.id !== b.dataset[attr]); save(); render(); });
+  del("[data-del-team]", "teams", "delTeam"); del("[data-del-up]", "upgrades", "delUp"); del("[data-del-ev]", "events", "delEv");
+  document.querySelectorAll("[data-del-city]").forEach(b => b.onclick = () => { if (S.cities.length <= 1) return; S.cities = S.cities.filter(c => c.id !== b.dataset.delCity); if (S.round > N() + 1) S.round = N() + 1; save(); render(); });
+  $("#addTeam").onclick = () => { S.teams.push({id: uid(), name: "Караван " + (S.teams.length + 1), good: S.goods[S.teams.length % S.goods.length].id, expense: 6, pred: {yes: "", value: ""}}); save(); render(); };
+  $("#addCity").onclick = () => { S.cities.push({id: uid(), name: "Новый город", prices: Object.fromEntries(S.goods.map(g => [g.id, 10])), order: {items: {}, reward: 30}}); save(); render(); };
+  $("#addUp").onclick = () => { S.upgrades.push({id: uid(), name: "Новое улучшение", cost: 10, restock: 0, exp: 0, shield: "", note: ""}); save(); render(); };
+  $("#addEv").onclick = () => { S.events.push({id: uid(), title: "Новое событие", amount: -3, cat: "другое"}); save(); render(); };
+  $("#reset").onclick = () => { if (!confirmReset) { confirmReset = true; return render(); } confirmReset = false; OFFERS.length = 0; S = {...S, teams: S.teams.map(t => ({...t, pred: {yes: "", value: ""}})), deals: [], orderDone: {}, round: 1, log: {}, showBalances: false}; save(); view = "game"; render(); };
+}
+/* ---------- QR-код без библиотек (байтовый режим, версии 1–10, уровни M/L) ---------- */
+const QRcode = (() => {
+  const EXP = new Array(512), LOG = new Array(256);
+  (() => { let x = 1; for (let i = 0; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 256) x ^= 0x11D; } for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255]; })();
+  const gmul = (a, b) => (a && b) ? EXP[LOG[a] + LOG[b]] : 0;
+  const genPoly = deg => { let g = [1]; for (let i = 0; i < deg; i++) { const n = new Array(g.length + 1).fill(0); for (let j = 0; j < g.length; j++) { n[j] ^= g[j]; n[j + 1] ^= gmul(g[j], EXP[i]); } g = n; } return g; };
+  const rsRem = (data, gen) => { const d = gen.length - 1, res = new Array(d).fill(0); for (const b of data) { const f = b ^ res[0]; res.shift(); res.push(0); for (let i = 0; i < d; i++) res[i] ^= gmul(gen[i + 1], f); } return res; };
+  /* [байт коррекции на блок, блоков 1-й группы, данных в блоке, блоков 2-й группы, данных в блоке] */
+  const EC_L = [null, [7, 1, 19, 0, 0], [10, 1, 34, 0, 0], [15, 1, 55, 0, 0], [20, 1, 80, 0, 0], [26, 1, 108, 0, 0], [18, 2, 68, 0, 0], [20, 2, 78, 0, 0], [24, 2, 97, 0, 0], [30, 2, 116, 0, 0], [18, 2, 68, 2, 69]];
+  const EC_M = [null, [10, 1, 16, 0, 0], [16, 1, 28, 0, 0], [26, 1, 44, 0, 0], [18, 2, 32, 0, 0], [24, 2, 43, 0, 0], [16, 4, 27, 0, 0], [18, 4, 31, 0, 0], [22, 2, 38, 2, 39], [22, 3, 36, 2, 37], [26, 4, 43, 1, 44]];
+  const ALIGN = [null, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46], [6, 28, 50]];
+  const bit = (v, i) => ((v >>> i) & 1) === 1;
+
+  function make(text, lvl) {
+    const bytes = Array.from(new TextEncoder().encode(text));
+    const T = lvl === "L" ? EC_L : EC_M;
+    let v = 1;
+    for (; v <= 10; v++) { const t = T[v], cap = t[1] * t[2] + t[3] * t[4]; if (4 + (v < 10 ? 8 : 16) + bytes.length * 8 <= cap * 8) break; }
+    if (v > 10) return null;
+    const [ecl, n1, d1, n2, d2] = T[v], cap = n1 * d1 + n2 * d2;
+    const bits = [], put = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+    put(4, 4); put(bytes.length, v < 10 ? 8 : 16); bytes.forEach(b => put(b, 8));
+    put(0, Math.min(4, cap * 8 - bits.length));
+    while (bits.length % 8) bits.push(0);
+    for (let p = 0; bits.length < cap * 8; p ^= 1) put(p ? 0x11 : 0xEC, 8);
+    const data = [];
+    for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; data.push(b); }
+    const gen = genPoly(ecl), blocks = []; let pos = 0;
+    for (let b = 0; b < n1 + n2; b++) { const len = b < n1 ? d1 : d2, dat = data.slice(pos, pos + len); pos += len; blocks.push({dat, ec: rsRem(dat, gen)}); }
+    const cw = [];
+    for (let i = 0; i < Math.max(d1, d2); i++) blocks.forEach(b => { if (i < b.dat.length) cw.push(b.dat[i]); });
+    for (let i = 0; i < ecl; i++) blocks.forEach(b => cw.push(b.ec[i]));
+
+    const size = 17 + 4 * v;
+    const m = Array.from({length: size}, () => new Array(size).fill(false));
+    const fn = Array.from({length: size}, () => new Array(size).fill(false));
+    const set = (x, y, val) => { m[y][x] = !!val; fn[y][x] = true; };
+    for (let i = 0; i < size; i++) { set(6, i, i % 2 === 0); set(i, 6, i % 2 === 0); }
+    const finder = (cx, cy) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const x = cx + dx, y = cy + dy; if (x < 0 || x >= size || y < 0 || y >= size) continue; const d = Math.max(Math.abs(dx), Math.abs(dy)); set(x, y, d !== 2 && d !== 4); } };
+    finder(3, 3); finder(size - 4, 3); finder(3, size - 4);
+    const ap = ALIGN[v];
+    for (let i = 0; i < ap.length; i++) for (let j = 0; j < ap.length; j++) {
+      if ((i === 0 && j === 0) || (i === 0 && j === ap.length - 1) || (i === ap.length - 1 && j === 0)) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) set(ap[i] + dx, ap[j] + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }
+    const eccBits = lvl === "L" ? 1 : 0;
+    const drawFormat = mask => {
+      const d = (eccBits << 3) | mask; let rem = d;
+      for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
+      const f = ((d << 10) | rem) ^ 0x5412;
+      for (let i = 0; i <= 5; i++) set(8, i, bit(f, i));
+      set(8, 7, bit(f, 6)); set(8, 8, bit(f, 7)); set(7, 8, bit(f, 8));
+      for (let i = 9; i < 15; i++) set(14 - i, 8, bit(f, i));
+      for (let i = 0; i < 8; i++) set(size - 1 - i, 8, bit(f, i));
+      for (let i = 8; i < 15; i++) set(8, size - 15 + i, bit(f, i));
+      set(8, size - 8, true);
+    };
+    drawFormat(0);
+    if (v >= 7) {
+      let rem = v; for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1F25);
+      const vb = (v << 12) | rem;
+      for (let i = 0; i < 18; i++) { const a = size - 11 + (i % 3), b = Math.floor(i / 3); set(a, b, bit(vb, i)); set(b, a, bit(vb, i)); }
+    }
+    let k = 0;
+    for (let right = size - 1; right >= 1; right -= 2) {
+      if (right === 6) right = 5;
+      for (let vert = 0; vert < size; vert++) for (let j = 0; j < 2; j++) {
+        const x = right - j, up = ((right + 1) & 2) === 0, y = up ? size - 1 - vert : vert;
+        if (!fn[y][x] && k < cw.length * 8) { m[y][x] = bit(cw[k >>> 3], 7 - (k & 7)); k++; }
+      }
+    }
+    const MASKS = [(x, y) => (x + y) % 2 === 0, (x, y) => y % 2 === 0, (x, y) => x % 3 === 0, (x, y) => (x + y) % 3 === 0,
+      (x, y) => (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0, (x, y) => x * y % 2 + x * y % 3 === 0,
+      (x, y) => (x * y % 2 + x * y % 3) % 2 === 0, (x, y) => ((x + y) % 2 + x * y % 3) % 2 === 0];
+    const applyMask = mk => { for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!fn[y][x] && MASKS[mk](x, y)) m[y][x] = !m[y][x]; };
+    const penalty = () => {
+      let p = 0, dark = 0; const lines = [];
+      for (let y = 0; y < size; y++) lines.push(m[y].map(Number));
+      for (let x = 0; x < size; x++) lines.push(m.map(row => +row[x]));
+      for (const ln of lines) {
+        let run = 1;
+        for (let i = 1; i < size; i++) { if (ln[i] === ln[i - 1]) run++; else { if (run >= 5) p += run - 2; run = 1; } }
+        if (run >= 5) p += run - 2;
+        const s = ln.join("");
+        for (const pat of ["10111010000", "00001011101"]) { let q = -1; while ((q = s.indexOf(pat, q + 1)) >= 0) p += 40; }
+      }
+      for (let y = 0; y < size - 1; y++) for (let x = 0; x < size - 1; x++) { const c = m[y][x]; if (c === m[y][x + 1] && c === m[y + 1][x] && c === m[y + 1][x + 1]) p += 3; }
+      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (m[y][x]) dark++;
+      return p + Math.max(0, Math.ceil(Math.abs(dark * 20 - size * size * 10) / (size * size)) - 1) * 10;
+    };
+    let best = 0, bp = Infinity;
+    for (let mk = 0; mk < 8; mk++) { applyMask(mk); drawFormat(mk); const p = penalty(); applyMask(mk); if (p < bp) { bp = p; best = mk; } }
+    applyMask(best); drawFormat(best);
+    return m;
+  }
+
+  function matrix(text) { return make(text, "M") || make(text, "L"); }
+  function svg(text) {
+    const m = matrix(text); if (!m) return null;
+    const n = m.length, b = 4; let d = "";
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      if (!m[y][x]) continue;
+      let x2 = x; while (x2 < n && m[y][x2]) x2++;
+      d += `M${x + b} ${y + b}h${x2 - x}v1h-${x2 - x}z`; x = x2;
+    }
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n + 2 * b} ${n + 2 * b}" shape-rendering="crispEdges" role="img" aria-label="QR-код"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  }
+  return {matrix, svg, make};
+})();
+
+/* ================= МУЛЬТИПЛЕЕР: QR + WebRTC (PeerJS), без собственного сервера ================= */
+const OFFERS = [];
+const clients = new Map();            // connectionId -> {c, cid, team}
+let hostStatus = "wait", hpeer = null, hretry = 0, bTimer = null, rTimer = null;
+const newRoom = () => "silkroad-" + uid() + uid().slice(0, 3);
+
+function schedBroadcast() { clearTimeout(bTimer); bTimer = setTimeout(broadcast, 120); }
+function hostRefresh() {
+  clearTimeout(rTimer);
+  if ($("#overlay").classList.contains("show") || view === "setup") return;
+  const a = document.activeElement;
+  if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) && $("#view").contains(a)) { rTimer = setTimeout(hostRefresh, 1500); return; }
+  render();
+}
+function updateNav() {
+  const b = document.querySelector('nav.tabs [data-view="players"]'); if (!b) return;
+  const n = [...clients.values()].filter(i => i.team).length;
+  b.textContent = n ? "Игроки · " + n : "Игроки (QR)";
+}
+const send = (c, m) => { try { if (c && c.open) c.send(m); } catch (e) {} };
+const teamsList = () => S.teams.map(t => ({id: t.id, name: t.name, goodName: gName(t.good), taken: [...clients.values()].some(i => i.team === t.id && i.c.open)}));
+
+function viewFor(t) {
+  const r = S.round;
+  const v = {title: S.settings.title, unit: S.settings.unit, n: N(), round: r,
+    team: {id: t.id, name: t.name, good: t.good, goodName: gName(t.good)},
+    others: S.teams.filter(x => x.id !== t.id).map(x => ({id: x.id, name: x.name, goodName: gName(x.good), good: x.good})),
+    goods: S.goods.map(g => ({id: g.id, name: g.name}))};
+  if (r > N()) { v.finished = true; v.end = balEnd(t, N()); return v; }
+  const l = L(t.id, r), c = city(r), inv = stock(t, r), owned = ownedBefore(t, r);
+  const done = ["ok", "revealed"].includes(l.status);
+  v.city = {name: c.name};
+  v.prices = S.goods.map(g => ({id: g.id, name: g.name, p: c.prices[g.id] ?? 0}));
+  v.inv = S.goods.filter(g => inv[g.id] !== 0 || g.id === t.good).map(g => ({id: g.id, name: g.name, q: inv[g.id], own: g.id === t.good}));
+  v.sellable = S.goods.filter(g => inv[g.id] > 0).map(g => ({id: g.id, name: g.name, q: inv[g.id], p: c.prices[g.id] ?? 0}));
+  v.owned = owned.map(u => u.name);
+  v.avail = S.upgrades.filter(u => !owned.includes(u) && !l.purchases.includes(u.id)).map(u => ({id: u.id, name: u.name, cost: u.cost, note: u.note}));
+  v.ops = ops(t, r).map(o => ({label: o.label, note: o.note || "", amt: o.amt}));
+  v.start = startKnown(t, r) ? balStart(t, r) : null;
+  v.end = done ? balEnd(t, r) : null;
+  v.status = l.status; v.tries = l.tries;
+  v.order = {text: orderText(c.order), reward: c.order.reward, doneBy: S.orderDone[r] ? (teamById(S.orderDone[r])?.name || "?") : "",
+    can: !S.orderDone[r] && Object.entries(c.order.items).every(([g, q]) => (inv[g] || 0) >= q)};
+  v.offers = OFFERS.filter(o => o.status === "open" && o.round === r && (o.seller === t.id || o.buyer === t.id)).map(o => {
+    const what = o.good ? `${o.qty} × ${gName(o.good)}` : (o.note || "услуга");
+    return {id: o.id, mine: o.by === t.id, byName: teamById(o.by)?.name || "?",
+      text: `${teamById(o.seller)?.name || "?"} продаёт «${teamById(o.buyer)?.name || "?"}»: ${what} за ${fmt(o.price)}`,
+      youSell: o.seller === t.id};
+  });
+  return v;
+}
+function pushTo(i) {
+  const t = i.team && teamById(i.team); if (i.team && !t) i.team = null;
+  send(i.c, t ? {t: "state", v: viewFor(t)} : {t: "teams", list: teamsList(), title: S.settings.title});
+}
+function broadcast() { clients.forEach(pushTo); updateNav(); }
+
+/* действия игроков (то же, что делает ведущий руками) */
+function aSell(t, g, q) {
+  const r = S.round; q = Math.round(q);
+  if (!S.goods.some(x => x.id === g) || !(q > 0)) return "Выберите товар и количество.";
+  const l = L(t.id, r); l.sales.push({good: g, qty: q, price: city(r).prices[g] ?? 0});
+  if (!stockOk(t, r)) { l.sales.pop(); return `Не хватает товара «${gName(g)}».`; }
+  resetAns(t.id, r); return "";
+}
+function aOrder(t) {
+  const r = S.round;
+  if (S.orderDone[r]) return "Заказ уже выполнил " + (teamById(S.orderDone[r])?.name || "другой караван");
+  S.orderDone[r] = t.id;
+  if (!stockOk(t, r)) { delete S.orderDone[r]; return "Не хватает товаров для заказа."; }
+  resetAns(t.id, r); return "";
+}
+function aBuy(t, id) {
+  const r = S.round, l = L(t.id, r), u = upById(id);
+  if (!u) return "Нет такого улучшения.";
+  if (ownedBefore(t, r).includes(u) || l.purchases.includes(id)) return "Это улучшение уже куплено.";
+  l.purchases.push(id); resetAns(t.id, r); return "";
+}
+function aCheck(t, val) {
+  const r = S.round, l = L(t.id, r);
+  if (["ok", "revealed"].includes(l.status)) return "";
+  const v = parseNum(val); if (isNaN(v)) return "Впишите число.";
+  l.answer = String(val);
+  if (Math.abs(v - balEnd(t, r)) < 0.005) l.status = "ok"; else { l.status = "wrong"; l.tries++; }
+  return "";
+}
+function aReveal(t) { const l = L(t.id, S.round); if (l.tries >= 2 && l.status !== "ok") l.status = "revealed"; return ""; }
+function aDeal(from, to, good, qty, price, note) {
+  const r = S.round; S.deals.push({round: r, from, to, good, qty, price, note});
+  if (good && !stockOk(teamById(from), r)) { S.deals.pop(); return `У продавца нет столько товара «${gName(good)}».`; }
+  resetAns(from, r); resetAns(to, r); return "";
+}
+function mkOffer(t, m) {
+  const r = S.round, other = teamById(m.other);
+  if (!other || other.id === t.id) return "Выберите другой караван.";
+  const price = parseNum(m.price); if (isNaN(price) || price < 0) return "Впишите цену (число не меньше нуля).";
+  const good = m.good && S.goods.some(g => g.id === m.good) ? m.good : "";
+  const qty = good ? Math.round(parseNum(m.qty)) : 0;
+  if (good && !(qty > 0)) return "Количество должно быть больше нуля.";
+  const note = String(m.note || "").trim().slice(0, 80);
+  if (!good && !note) return "Опишите услугу.";
+  const sell = m.dir === "sell";
+  if (sell && good && (stock(t, r)[good] || 0) < qty) return "У вас нет столько товара.";
+  OFFERS.push({id: uid(), round: r, by: t.id, seller: sell ? t.id : other.id, buyer: sell ? other.id : t.id, good, qty, price, note, status: "open"});
+  return "";
+}
+function ansOffer(t, m) {
+  const o = OFFERS.find(x => x.id === m.id && x.status === "open" && x.round === S.round);
+  if (!o) return "Предложение уже неактуально.";
+  if (o.by === t.id || (o.seller !== t.id && o.buyer !== t.id)) return "Отвечать должен другой караван.";
+  if (!m.accept) { o.status = "declined"; return ""; }
+  const e = aDeal(o.seller, o.buyer, o.good, o.qty, o.price, o.note);
+  if (e) return e;
+  o.status = "done"; return "";
+}
+function claim(i, tid) {
+  if (!teamById(tid)) return "Нет такого каравана.";
+  const other = [...clients.values()].find(j => j !== i && j.team === tid && j.c.open);
+  if (other && other.cid !== i.cid) return "Этот караван уже занят другим игроком.";
+  if (other) other.team = null;
+  i.team = tid; return "";
+}
+function onMsg(i, m) {
+  if (!m || typeof m !== "object") return;
+  const rep = (text, ok) => send(i.c, {t: "msg", text, ok: !!ok});
+  const conn = () => { broadcast(); if (view === "players") hostRefresh(); };
+  if (m.t === "hello") { i.cid = String(m.cid || ""); if (m.team) claim(i, m.team); pushTo(i); conn(); return; }
+  if (m.t === "pick") { const e = claim(i, m.team); if (e) rep(e); conn(); return; }
+  if (m.t === "leave") { i.team = null; conn(); return; }
+  const t = i.team && teamById(i.team); if (!t) return;
+  if (S.round > N()) { rep("Путь окончен."); return; }
+  let e = "", okText = "";
+  switch (m.t) {
+    case "sell": e = aSell(t, m.good, parseNum(m.qty)); okText = "Продано на базаре"; break;
+    case "order": e = aOrder(t); okText = "Заказ выполнен!"; break;
+    case "buy": e = aBuy(t, m.up); okText = "Улучшение куплено"; break;
+    case "check": e = aCheck(t, m.value); break;
+    case "reveal": e = aReveal(t); break;
+    case "offer": e = mkOffer(t, m); okText = "Предложение отправлено"; break;
+    case "answer": e = ansOffer(t, m); okText = m.accept ? "Сделка заключена" : "Отклонено"; break;
+    case "cancel": { const o = OFFERS.find(x => x.id === m.id && x.by === t.id && x.status === "open"); if (o) o.status = "cancelled"; break; }
+    default: return;
+  }
+  if (e) rep(e); else if (okText) rep(okText, true);
+  save(); broadcast(); hostRefresh();
+}
+
+/* ---- ведущий: сеть ---- */
+function startHost() {
+  if (!S.room) { S.room = newRoom(); save(); }
+  if (typeof Peer === "undefined") { hostStatus = "nolib"; return; }
+  hostStatus = "wait";
+  try { hpeer = new Peer(S.room, {debug: 0}); } catch (e) { hostStatus = "err"; return; }
+  hpeer.on("open", () => { hostStatus = "ok"; hretry = 0; if (view === "players") hostRefresh(); });
+  hpeer.on("disconnected", () => { hostStatus = "wait"; try { hpeer.reconnect(); } catch (e) {} });
+  hpeer.on("error", e => {
+    if (e.type === "unavailable-id" && hretry++ < 8) { hostStatus = "wait"; try { hpeer.destroy(); } catch (x) {} setTimeout(startHost, 4000); }
+    else if (e.type !== "peer-unavailable") { hostStatus = "err:" + e.type; if (view === "players") hostRefresh(); }
+  });
+  hpeer.on("connection", c => {
+    const i = {c, cid: "", team: null}; clients.set(c.connectionId, i);
+    c.on("data", m => onMsg(i, m));
+    const gone = () => { clients.delete(c.connectionId); broadcast(); if (view === "players") hostRefresh(); };
+    c.on("close", gone); c.on("error", gone);
+  });
+}
+function restartHost() {
+  clients.forEach(i => { try { i.c.close(); } catch (e) {} }); clients.clear();
+  try { hpeer && hpeer.destroy(); } catch (e) {}
+  S.room = newRoom(); save(); hretry = 0; setTimeout(() => { startHost(); updateNav(); render(); }, 300);
+}
+function joinUrl() {
+  const base = (S.settings.baseUrl || "").trim() || (/^https?:$/.test(location.protocol) ? location.href.split("#")[0] : "");
+  return base ? base + "#join=" + S.room : "";
+}
+function renderPlayers() {
+  const url = joinUrl(), svg = url ? QRcode.svg(url) : null;
+  const st = hostStatus === "ok" ? ["ok", "готово, игроки могут заходить"] : hostStatus === "wait" ? ["pending", "подключаюсь к сети…"]
+    : hostStatus === "nolib" ? ["wrong", "не загрузилась библиотека связи: нужен интернет"] : ["wrong", "ошибка связи (" + hostStatus.replace("err:", "") + ")"];
+  const list = teamsList();
+  $("#view").innerHTML = `<div class="bar"><div class="round">Игроки<small>заходят с телефонов по QR</small></div><span class="spacer"></span><span class="chip ${st[0]}">${esc(st[1])}</span></div>
+  <div class="panel" style="display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:20px;align-items:start" id="qrgrid">
+    <div class="qrbox">${svg || '<p class="hint" style="padding:16px">QR не получится построить: нужен адрес страницы в интернете (см. поле справа).</p>'}</div>
+    <div>
+      <h2>Как подключить игроков</h2>
+      <ol class="rules" style="columns:1">
+        <li>Игрок наводит камеру телефона на QR и открывает ссылку.</li>
+        <li>Выбирает свободный караван и играет: продаёт на базаре, выполняет заказ, покупает улучшения, предлагает сделки другим игрокам и считает казну.</li>
+        <li>Ведущий (этот экран) остаётся главным: вытягивает события, переходит в следующий город. Всё, что делают игроки, сразу видно в карточках.</li>
+      </ol>
+      <label class="field" style="margin-top:10px">Адрес этой страницы в интернете
+        <input id="bu" value="${esc(S.settings.baseUrl || "")}" placeholder="${esc(/^https?:$/.test(location.protocol) ? location.href.split("#")[0] : "https://ваш-сайт/караваны.html")}"></label>
+      ${url ? `<label class="field" style="margin-top:10px">Ссылка для игроков<input id="ju" readonly value="${esc(url)}" onclick="this.select()"></label>
+      <div class="actions" style="margin-top:8px"><button class="btn ghost small" id="cp">Скопировать ссылку</button><span class="hint" id="cpm"></span></div>` : ""}
+      ${!url ? `<p class="inline-warn">Страница открыта как файл на компьютере, телефоны её так не увидят. Выложите файл на любой бесплатный хостинг статических страниц (GitHub Pages, Netlify Drop, Cloudflare Pages) и вставьте адрес в поле выше. Ссылка вида file:// на телефонах не откроется.</p>` : ""}
+    </div>
+  </div>
+  <div class="panel"><h2>Караваны</h2><table class="edit"><thead><tr><th>Караван</th><th>Игрок</th><th></th></tr></thead><tbody>
+    ${list.map(x => `<tr><td><b>${esc(x.name)}</b> <span class="hint">${esc(x.goodName)}</span></td><td>${x.taken ? '<span class="chip ok">подключён</span>' : '<span class="chip pending">свободен</span>'}</td>
+      <td>${x.taken ? `<button class="btn danger small" data-free="${x.id}">Освободить</button>` : ""}</td></tr>`).join("")}
+  </tbody></table>
+  <p class="hint">Игроков подключено: ${[...clients.values()].filter(i => i.team).length}. Караваны без игрока ведёт ведущий вручную, как раньше. Держите эту вкладку открытой и экран включённым: пока она работает, игра идёт.</p>
+  <div class="actions"><button class="btn danger small" id="newroom">Новая комната (отключит всех)</button></div></div>`;
+  $("#bu").onchange = e => { S.settings.baseUrl = e.target.value.trim(); save(); render(); };
+  if ($("#cp")) $("#cp").onclick = () => { const f = () => { $("#cpm").textContent = "Скопировано"; }; if (navigator.clipboard) navigator.clipboard.writeText(url).then(f, () => { $("#ju").select(); }); else $("#ju").select(); };
+  document.querySelectorAll("[data-free]").forEach(b => b.onclick = () => { clients.forEach(i => { if (i.team === b.dataset.free) { i.team = null; } }); broadcast(); render(); });
+  $("#newroom").onclick = restartHost;
+  if (window.innerWidth < 800) $("#qrgrid").style.gridTemplateColumns = "1fr";
+}
+
+/* ================= ИГРОК (телефон) ================= */
+function startPlayer(room) {
+  document.querySelector(".wrap").hidden = true; $("#overlay").hidden = true;
+  const box = document.createElement("div"); box.className = "wrap pl";
+  box.innerHTML = `<header class="top"><h1 id="pt">Караваны Шёлкового пути</h1><span class="spacer"></span><span id="pconn" class="chip pending">подключаюсь…</span></header><main id="pview" style="margin-top:14px"></main><div id="ptoast" class="ptoast" role="status"></div>`;
+  document.body.appendChild(box);
+  const ss = { get: k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch (e) {} } };
+  let cid = ss.get("sr-cid"); if (!cid) { cid = uid() + uid(); ss.set("sr-cid", cid); }
+  let myTeam = ss.get("sr-team-" + room) || "", ps = null, pteams = null, peer = null, conn = null, lastRound = null, lastIncoming = 0, tt = null, retryT = null, up = false;
+  const setConn = (t, k) => { const c = $("#pconn"); c.textContent = t; c.className = "chip " + k; };
+  const toast = (text, ok) => { const e = $("#ptoast"); e.textContent = text; e.className = "ptoast show" + (ok ? " ok" : ""); clearTimeout(tt); tt = setTimeout(() => e.className = "ptoast", 3800); };
+  const psend = m => { if (conn && conn.open) conn.send(m); else toast("Нет связи с ведущим. Подождите, переподключаюсь."); };
+
+  function connect() {
+    clearTimeout(retryT); setConn("подключаюсь…", "pending"); up = false;
+    if (typeof Peer === "undefined") { setConn("нет библиотеки связи", "wrong"); $("#pview").innerHTML = '<div class="panel"><h2>Нужен интернет</h2><p>Не загрузилась библиотека связи. Проверьте подключение телефона и обновите страницу.</p></div>'; return; }
+    try { peer && peer.destroy(); } catch (e) {}
+    peer = new Peer(undefined, {debug: 0});
+    peer.on("open", () => {
+      conn = peer.connect(room, {reliable: true, serialization: "json"});
+      conn.on("open", () => { up = true; setConn("на связи", "ok"); conn.send({t: "hello", cid, team: myTeam}); });
+      conn.on("data", onData);
+      conn.on("close", lost); conn.on("error", lost);
+    });
+    peer.on("error", e => { setConn(e.type === "peer-unavailable" ? "ведущий не найден" : "нет связи", "wrong"); lost(); });
+  }
+  function lost() { if (up) { up = false; setConn("связь потеряна, пробую снова…", "wrong"); } clearTimeout(retryT); retryT = setTimeout(connect, 2500); }
+  function onData(m) {
+    if (m.t === "state") { ps = m.v; pteams = null; document.title = ps.title + " · " + ps.team.name; myTeam = ps.team.id; ss.set("sr-team-" + room, myTeam);
+      const inc = (ps.offers || []).filter(o => !o.mine).length; if (inc > lastIncoming && navigator.vibrate) { try { navigator.vibrate(200); } catch (e) {} } lastIncoming = inc; }
+    else if (m.t === "teams") { ps = null; pteams = m.list; myTeam = ""; ss.set("sr-team-" + room, ""); $("#pt").textContent = m.title || "Караваны"; }
+    else if (m.t === "msg") toast(m.text, m.ok);
+    draw();
+  }
+
+  const capture = root => { const o = {vals: {}, focus: null}; root.querySelectorAll("input[id],select[id]").forEach(e => o.vals[e.id] = e.value); const a = document.activeElement; if (a && a.id && root.contains(a)) o.focus = a.id; return o; };
+  const restore = (root, o) => {
+    for (const [id, v] of Object.entries(o.vals)) { const e = root.querySelector("#" + id); if (!e || v === "") continue; if (e.tagName === "SELECT" && ![...e.options].some(x => x.value === v)) continue; e.value = v; }
+    if (o.focus) { const e = root.querySelector("#" + o.focus); if (e) e.focus(); }
+  };
+  function draw() {
+    const root = $("#pview"), keep = capture(root);
+    if (ps && ps.round !== lastRound) { lastRound = ps.round; keep.vals = {}; keep.focus = null; }
+    root.innerHTML = ps ? gameHtml(ps) : pickHtml();
+    bind(); restore(root, keep);
+    if (ps && !ps.finished) { const o = $("#p-d"); if (o) { const g = $("#p-good").value; $("#p-qtyl").hidden = g === ""; $("#p-notel").hidden = g !== ""; } }
+  }
+  const pickHtml = () => !pteams ? '<div class="panel"><p>Подключаюсь к ведущему…</p></div>' :
+    `<div class="panel"><h2>Выберите свой караван</h2><div style="display:grid;gap:10px">${pteams.map(t => `<button class="btn ${t.taken ? "ghost" : ""}" style="text-align:left;padding:14px" data-pick="${t.id}" ${t.taken ? "disabled" : ""}>${esc(t.name)}<br><span style="font-weight:400;font-size:14px">${t.taken ? "уже занят" : "везёт: " + esc(t.goodName)}</span></button>`).join("")}</div></div>`;
+
+  function gameHtml(v) {
+    const U = esc(v.unit);
+    const hdr = `<div class="panel"><div class="team-head"><div style="flex:1"><div class="name">${esc(v.team.name)}</div><div class="biz">Везёт: ${esc(v.team.goodName)}</div></div>${v.finished ? "" : `<span class="chip ${v.status}">${{pending: "считаете", ok: "верно", wrong: "есть ошибка", revealed: "ответ показан"}[v.status]}</span>`}</div></div>`;
+    if (v.finished) return hdr + `<div class="panel"><h2>Путь окончен</h2><p>Казна в конце пути:</p><div class="big-balance ${cls(v.end)}">${fmt(v.end)} ${U}</div><p>${v.end >= 0 ? "Долг возвращён, караван в плюсе." : "Караван остался в долгу."}</p></div>`;
+    const done = ["ok", "revealed"].includes(v.status);
+    const goodOpts = v.goods.map(g => `<option value="${g.id}" ${g.id === v.team.good ? "selected" : ""}>${esc(g.name)}</option>`).join("") + '<option value="">услуга</option>';
+    return `<div class="bar" style="margin:0 0 10px"><div class="round" style="font-size:24px">${esc(v.city.name)}<small>город ${v.round} из ${v.n}</small></div></div>${hdr}
+    <div class="panel"><h2>Ваш караван</h2><div class="inv">${v.inv.map(g => `<span class="chip ${g.own ? "own" : ""}">${esc(g.name)}: ${g.q}</span>`).join("")}${v.owned.map(n => `<span class="chip up">${esc(n)}</span>`).join("")}</div></div>
+    <div class="panel"><h2>Журнал</h2><table class="ledger"><tr class="start"><td>Казна на входе в город</td><td class="amt ${v.start === null ? "" : cls(v.start)}">${v.start === null ? "?" : fmt(v.start)}</td></tr>
+      ${v.ops.map(o => `<tr><td>${esc(o.label)}${o.note ? `<span class="note">${esc(o.note)}</span>` : ""}</td><td class="amt ${cls(o.amt)}">${fmt(o.amt, true)}</td></tr>`).join("")}</table>
+      <div class="answer" style="margin-top:10px">${done ? `<span>Казна при выходе:</span> <span class="big-balance ${cls(v.end)}">${fmt(v.end)}</span>` :
+        `<label for="p-ans">Казна при выходе из города:</label><input id="p-ans" inputmode="decimal" placeholder="?"><button class="btn small" id="p-check">Проверить</button>
+        ${v.status === "wrong" ? `<span class="msg neg">Неверно (попыток: ${v.tries}). Пересчитайте.</span>` : ""}${v.tries >= 2 ? '<button class="btn ghost small" id="p-reveal">Показать ответ</button>' : ""}`}</div></div>
+    <div class="panel"><h2>Базар: здесь покупают</h2><div class="prices">${v.prices.map(g => `<div class="price"><span>${esc(g.name)}</span><b>${fmt(g.p)}</b><span>за 1 шт.</span></div>`).join("")}</div>
+      <div class="actions" style="margin-top:10px"><select id="p-sg" ${v.sellable.length ? "" : "disabled"}>${v.sellable.map(g => `<option value="${g.id}">${esc(g.name)} по ${fmt(g.p)} (есть ${g.q})</option>`).join("") || "<option>Нечего продавать</option>"}</select>
+      <input id="p-sq" type="number" min="1" value="1" style="width:4.5em;border:1.5px solid var(--line);border-radius:8px;padding:6px 8px" aria-label="Сколько"><button class="btn small" id="p-sell" ${v.sellable.length ? "" : "disabled"}>Продать</button></div></div>
+    <div class="order"><h3 style="margin:0">Заказ правителя ${esc(v.city.name)}</h3><div>${esc(v.order.text)}</div><div class="rw">+${fmt(v.order.reward)}</div>
+      ${v.order.doneBy ? `<span class="chip ok">Выполнил: ${esc(v.order.doneBy)}</span>` : `<button class="btn small" id="p-order" ${v.order.can ? "" : "disabled"}>Выполнить заказ</button>${v.order.can ? "" : '<div class="hint">Нужен весь набор товаров. Чужие товары можно купить у других караванов.</div>'}`}</div>
+    <div class="panel" style="margin-top:16px"><h2>Сделки с другими караванами</h2>
+      ${v.offers.map(o => `<div class="offer"><div>${esc(o.text)}</div><div class="hint">${o.mine ? "Ждёте ответа" : esc(o.byName) + " предлагает вам"}</div>
+        <div class="actions" style="margin-top:6px">${o.mine ? `<button class="btn danger small" data-oc="${o.id}">Отменить</button>` : `<button class="btn small" data-oa="${o.id}" data-ac="1">Принять</button><button class="btn danger small" data-oa="${o.id}" data-ac="0">Отклонить</button>`}</div></div>`).join("") || '<p class="hint" style="margin-top:0">Пока нет предложений.</p>'}
+      ${v.others.length ? `<h3 style="margin-top:12px">Предложить сделку</h3><div class="fields" id="p-d">
+        <label class="field">Я<select id="p-dir"><option value="sell">продаю</option><option value="buy">хочу купить</option></select></label>
+        <label class="field">Каравану<select id="p-other">${v.others.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join("")}</select></label>
+        <label class="field">Товар<select id="p-good">${goodOpts}</select></label>
+        <label class="field" id="p-qtyl">Сколько<input id="p-qty" type="number" min="1" value="1" style="width:5em"></label>
+        <label class="field" id="p-notel" hidden>Что за услуга<input id="p-note" placeholder="проводник через пустыню"></label>
+        <label class="field">Цена за всё<input id="p-price" inputmode="decimal" style="width:6em" placeholder="15"></label>
+        <label class="field">&nbsp;<button class="btn" id="p-offer">Предложить</button></label></div>` : ""}</div>
+    <div class="panel"><h2>Улучшения</h2><div class="actions"><select id="p-up" ${v.avail.length ? "" : "disabled"}>${v.avail.map(u => `<option value="${u.id}">${esc(u.name)}: ${fmt(u.cost)}</option>`).join("") || "<option>Всё куплено</option>"}</select><button class="btn ghost small" id="p-buy" ${v.avail.length ? "" : "disabled"}>Купить</button></div>
+      ${v.avail.length ? `<p class="hint" id="p-upnote">${esc(v.avail[0].note || "")}</p>` : ""}<p class="hint">Улучшение оплачивается сразу, а работает со следующего города.</p></div>
+    <div class="actions" style="margin-top:8px"><button class="btn ghost small" id="p-leave">Сменить караван</button></div>`;
+  }
+  function bind() {
+    const q = (id, fn) => { const e = document.getElementById(id); if (e) e.onclick = fn; };
+    document.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => { myTeam = b.dataset.pick; psend({t: "pick", team: b.dataset.pick}); });
+    q("p-sell", () => psend({t: "sell", good: $("#p-sg").value, qty: $("#p-sq").value}));
+    q("p-order", () => psend({t: "order"}));
+    q("p-buy", () => psend({t: "buy", up: $("#p-up").value}));
+    q("p-reveal", () => psend({t: "reveal"}));
+    q("p-leave", () => { myTeam = ""; ss.set("sr-team-" + room, ""); lastIncoming = 0; psend({t: "leave"}); });
+    const chk = () => { const v = $("#p-ans").value; if (v.trim()) psend({t: "check", value: v}); };
+    q("p-check", chk); if ($("#p-ans")) $("#p-ans").addEventListener("keydown", e => { if (e.key === "Enter") chk(); });
+    q("p-offer", () => psend({t: "offer", dir: $("#p-dir").value, other: $("#p-other").value, good: $("#p-good").value, qty: $("#p-qty").value, price: $("#p-price").value, note: $("#p-note").value}));
+    if ($("#p-good")) $("#p-good").onchange = e => { $("#p-qtyl").hidden = e.target.value === ""; $("#p-notel").hidden = e.target.value !== ""; };
+    if ($("#p-up")) $("#p-up").onchange = e => { const u = ps.avail.find(x => x.id === e.target.value); if ($("#p-upnote")) $("#p-upnote").textContent = u ? u.note : ""; };
+    document.querySelectorAll("[data-oa]").forEach(b => b.onclick = () => psend({t: "answer", id: b.dataset.oa, accept: b.dataset.ac === "1"}));
+    document.querySelectorAll("[data-oc]").forEach(b => b.onclick = () => psend({t: "cancel", id: b.dataset.oc}));
+  }
+  draw(); connect();
+}
+
+document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => { view = b.dataset.view; confirmReset = false; render(); });
+const JOIN = new URLSearchParams(location.hash.slice(1)).get("join");
+if (JOIN) startPlayer(JOIN); else { render(); startHost(); }
+</script>
+</body>
+</html>
